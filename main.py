@@ -172,6 +172,7 @@ async def accept_formul(message: Message, state: FSMContext) -> None:
     else:
 
         data = await state.get_data()
+
         try:
 
             append_physics_formul = AppendPhysicsFormuls(data['value'], data['description'], data['formul'], data['unit'])
