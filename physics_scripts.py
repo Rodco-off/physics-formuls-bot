@@ -54,8 +54,9 @@ class PhysicsFormul:
         with sqlite3.connect(DATA_BASE) as connect:
 
             cursor = connect.cursor()
+            print(self.physics_name)
             result = cursor.execute(f'''SELECT Formuls FROM physics_formuls
-                                        WHERE Value = '{self.physics_name[0]}' ''').fetchall()
+                                        WHERE Value = '{self.physics_name}' ''').fetchall()
 
         if not result:
 
@@ -188,9 +189,7 @@ class AppendPhysicsFormuls:
             result = cursor.execute(f'''SELECT COUNT(ID) FROM physics_value
                                         WHERE Value = '{value}' AND Description = '{value}' ''').fetchall()
 
-            print(bool(result[0][0]))
-
-        return True if bool(not result[0][0]) else False
+        return True if result[0][0] else False
 
     def check_formul_unique(self, formul: str) -> None:
 
@@ -200,6 +199,4 @@ class AppendPhysicsFormuls:
             result = cursor.execute(f'''SELECT COUNT(ID) FROM physics_formuls
                                         WHERE Formuls = '{formul}' ''').fetchall()
 
-            print(bool(result[0][0]))
-
-        return True if bool(not result[0][0]) else False
+        return True if result[0][0] else False
