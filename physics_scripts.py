@@ -21,7 +21,7 @@ class PhysicsFormul:
 
         if name == 'name' and type(value) is not str:
 
-            raise WriteNotStr('😢Извините, но вы ввели неправильное значение !😢')
+            raise WriteNotStr('😢Извините, но вы ввели недопустимое значение !😢')
 
         else:
 
@@ -35,7 +35,11 @@ class PhysicsFormul:
             result = curcor.execute(f'''SELECT Value FROM physics_value
                                         WHERE Value = '{self.name}' OR Description = '{self.name}' ''').fetchall()
 
-        return result[0][0]
+            if not result:
+
+                raise SearchError(f'Не найденно физического значения по имени: {self.name}')
+
+        return self.remove_tuple(result[0])
 
     def __get_unit(self) -> str:
 
@@ -73,30 +77,27 @@ class PhysicsFormul:
 
         with connect(DATA_BASE) as con:
 
-            decoding_formuls_list = []
+            cursor = con.cursor()
+            result = cursor.execute(f'''SELECT Description_Formuls FROM physics_formuls
+                                       WHERE Value = '{self.physics_name}' ''').fetchall()[:1]
 
-            for formul in self.physics_formuls:
+            all_description = []
 
-                decoding_formul = ''
-                values = formul.split()
+            for value_formuls in result:
+
+                value_formuls = self.remove_tuple(value_formuls)
+                values = value_formuls.split(';')
+                description_values = []
 
                 for value in values:
 
-                    cursor = con.cursor()
-                    result = cursor.execute(f'''SELECT Description FROM physics_value
-                                                WHERE Value = '{value}' ''').fetchall()
+                    result_description = cursor.execute(f'''SELECT Description, Unit FROM physics_value
+                                                            WHERE Value = '{value}' ''').fetchall()
+                    description_values.append(f'{value[:value.find('(')]} - {result_description[0][0]} [{result_description[0][1]}]')
 
-                    if not result:
+                all_description.append(description_values)
 
-                        decoding_formul += value + ' '
-
-                    else:
-
-                        decoding_formul += result[0][0] + ' '
-
-                decoding_formuls_list.append(decoding_formul)
-
-        return decoding_formuls_list
+        return all_description
 
     @staticmethod
     def remove_tuple(formul: tuple) -> str:  # Убирает скобки у кортежа
