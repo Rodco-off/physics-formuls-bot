@@ -1,8 +1,8 @@
-import sqlite3
+from sqlite3 import connect
 from typing import Any
 
 from config import DATA_BASE
-from physics_error import SearchError, ValueNotUniqueError
+from physics_error import SearchError, ValueNotUniqueError, WriteNotStr
 
 
 class PhysicsFormul:
@@ -17,26 +17,32 @@ class PhysicsFormul:
         self.physics_formuls = self.__get_physics_formul()
         self.physics_formuls_decoding = self.__get_decoding_formuls()
 
+    def __setattr__(self, name: str, value: str) -> None:
+
+        if name == 'name' and type(value) is not str:
+
+            raise WriteNotStr('😢Извините, но вы ввели неправильное значение !😢')
+
+        else:
+
+            super().__setattr__(name, value)
+
     def __get_physics_name(self) -> str:  # Возвращает физическое обозначение от его названия
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
-            cursor = connect.cursor()
-            result = cursor.execute(f'''SELECT Value FROM physics_value
-                                        WHERE Description = '{self.name}' OR Value = '{self.name}' ''').fetchall()
+            curcor = con.cursor()
+            result = curcor.execute(f'''SELECT Value FROM physics_value
+                                        WHERE Value = '{self.name}' OR Description = '{self.name}' ''').fetchall()
 
-        if not result:
-
-            raise SearchError(f'😢Извините, но результат поиска имени {self.name} в базе данных не найден😢')
-
-        return self.remove_tuple(result[0])
+        return result[0][0]
 
     def __get_unit(self) -> str:
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
-            curosr = connect.cursor()
-            result = curosr.execute(f'''SELECT Unit FROM physics_value
+            cursor = con.cursor()
+            result = cursor.execute(f'''SELECT Unit FROM physics_value
                                         WHERE Value = '{self.physics_name}' ''').fetchall()
 
         if result[0][0] is None:
@@ -51,10 +57,9 @@ class PhysicsFormul:
 
     def __get_physics_formul(self) -> list:  # Возвращает список найденных физических обозначений
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
-            cursor = connect.cursor()
-            print(self.physics_name)
+            cursor = con.cursor()
             result = cursor.execute(f'''SELECT Formuls FROM physics_formuls
                                         WHERE Value = '{self.physics_name}' ''').fetchall()
 
@@ -66,7 +71,7 @@ class PhysicsFormul:
 
     def __get_decoding_formuls(self) -> list:  # Возвращает список расшифрованных физических обозначений
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
             decoding_formuls_list = []
 
@@ -77,7 +82,7 @@ class PhysicsFormul:
 
                 for value in values:
 
-                    cursor = connect.cursor()
+                    cursor = con.cursor()
                     result = cursor.execute(f'''SELECT Description FROM physics_value
                                                 WHERE Value = '{value}' ''').fetchall()
 
@@ -111,9 +116,9 @@ class PhysicsName:
     @classmethod
     def get_all_physics_name(cls) -> list[list]:
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
-            cursor = connect.cursor()
+            cursor = con.cursor()
             result = cursor.execute('''SELECT Description, Value FROM physics_value''').fetchall()
 
         index = 0
@@ -169,9 +174,9 @@ class AppendPhysicsFormuls:
 
             raise ValueNotUniqueError('Такая формула уже есть для этого обозначения')
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
-            cursor = connect.cursor()
+            cursor = con.cursor()
 
             if self.is_append_formul:
 
@@ -183,9 +188,9 @@ class AppendPhysicsFormuls:
 
     def check_value_unique(self, value: str) -> None:
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
-            cursor = connect.cursor()
+            cursor = con.cursor()
             result = cursor.execute(f'''SELECT COUNT(ID) FROM physics_value
                                         WHERE Value = '{value}' AND Description = '{value}' ''').fetchall()
 
@@ -193,9 +198,9 @@ class AppendPhysicsFormuls:
 
     def check_formul_unique(self, formul: str) -> None:
 
-        with sqlite3.connect(DATA_BASE) as connect:
+        with connect(DATA_BASE) as con:
 
-            cursor = connect.cursor()
+            cursor = con.cursor()
             result = cursor.execute(f'''SELECT COUNT(ID) FROM physics_formuls
                                         WHERE Formuls = '{formul}' ''').fetchall()
 

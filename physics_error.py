@@ -6,3 +6,8 @@ class SearchError(Exception):
 class ValueNotUniqueError(Exception):
 
     '''Класс для описания ошибки, когда значение не уникально'''
+
+
+class WriteNotStr(Exception):
+
+    '''Класс для описания ошибки, когда вводиться тип не строка'''
