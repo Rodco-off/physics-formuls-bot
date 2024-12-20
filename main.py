@@ -3,7 +3,7 @@ from physics_error import SearchError, ValueNotUniqueError
 from physics_scripts import PhysicsFormul, PhysicsName, AppendPhysicsFormuls
 from utils.state_physics_formuls import StepGetPhysicsFormul, StepAppendPhysicsFormuls
 
-from aiogram.types import Message
+from aiogram.types import Message, URLInputFile
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -89,11 +89,12 @@ async def get_physics_formuls(message: Message, state: FSMContext) -> None:
 
         else:
 
-            await message.answer(f'''Вот все формулы, которые я смог найти в своей базе данных для {phisicsFormul.physics_name}:\n
-Измеряется в {phisicsFormul.unit}\n
-{'·' + ',\n· '.join(phisicsFormul.physics_formuls)}\n
-Вот расшифровка всех формул в том же порядке: \n
-{'·' + ',\n· '.join(phisicsFormul.physics_formuls_decoding)}''')
+            await message.answer('Вот все найденные мной формулы: ')
+            await message.answer(f'Измеряется {phisicsFormul.name} в {phisicsFormul.unit}')
+
+            for url_image in phisicsFormul.physics_formuls:
+
+                await message.bot.send_photo(message.chat.id, URLInputFile(url_image))
 
     else:
 
@@ -125,7 +126,7 @@ async def append_value_formul(message: Message, state: FSMContext) -> None:
 async def appned_description_formul(message: Message, state: FSMContext) -> None:
 
     await state.update_data(description=message.text)
-    await message.answer('Хорошо, теперь введите саму формулу')
+    await message.answer('Хорошо, теперь введите ссылку на формулу')
     await state.set_state(StepAppendPhysicsFormuls.FORMUL)
 
 
