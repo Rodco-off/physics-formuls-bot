@@ -79,11 +79,15 @@ class PhysicsFormul:
 
             cursor = con.cursor()
             result = cursor.execute(f'''SELECT Description_Formuls FROM physics_formuls
-                                       WHERE Value = '{self.physics_name}' ''').fetchall()[:1]
+                                       WHERE Value = '{self.physics_name}' ''').fetchall()
 
             all_description = []
 
             for value_formuls in result:
+
+                if not value_formuls:
+
+                    raise SearchError('Неизвестная ошибка. Просим обратиться в поддержку')
 
                 value_formuls = self.remove_tuple(value_formuls)
                 values = value_formuls.split(';')
@@ -115,7 +119,7 @@ class PhysicsName:
     STEP_NAME = 50
 
     @classmethod
-    def get_all_physics_name(cls) -> list[list]:
+    def get_all_physics_name(cls) -> list[list]:  # Делит количество формул на STEP_NAME
 
         with connect(DATA_BASE) as con:
 
@@ -124,7 +128,7 @@ class PhysicsName:
 
         index = 0
         start_index = 0
-        end_index = 50
+        end_index = cls.STEP_NAME
         physics_name_lists = []
 
         for index in range(len(result) // cls.STEP_NAME + 1):
@@ -138,7 +142,7 @@ class PhysicsName:
 
             index += 1
             start_index = end_index
-            end_index += 50
+            end_index += cls.STEP_NAME
 
         return physics_name_lists
 
