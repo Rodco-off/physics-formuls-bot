@@ -116,35 +116,43 @@ class PhysicsName:
 
     '''Класс для нахождения физических обозначений'''
 
-    STEP_NAME = 50
-
     @classmethod
-    def get_all_physics_name(cls) -> list[list]:  # Делит количество формул на STEP_NAME
+    def get_all_physics_name(cls) -> list[list[str]]:  # Делит физические обозначения по категориям
 
         with connect(DATA_BASE) as con:
 
             cursor = con.cursor()
-            result = cursor.execute('''SELECT Description, Value FROM physics_value''').fetchall()
+            result = cursor.execute('''SELECT Description, Value, Chapter FROM physics_value''').fetchall()
 
-        index = 0
-        start_index = 0
-        end_index = cls.STEP_NAME
+        result.sort(key=lambda data: data[2])
+        chapters = cls.get_chapters()
+        last_chapter = chapters[0]
         physics_name_lists = []
+        physics_name_list = []
 
-        for index in range(len(result) // cls.STEP_NAME + 1):
+        for data in result:
 
-            physics_name_lists.append([])
+            description, value, chapter = data
 
-            for name, physics_name in result[start_index:end_index]:
+            if last_chapter != chapter:
 
-                value = f'{name} - {physics_name}'
-                physics_name_lists[index].append(value)
+                last_chapter = chapter
+                physics_name_lists.append(physics_name_list)
+                physics_name_list = []
 
-            index += 1
-            start_index = end_index
-            end_index += cls.STEP_NAME
+            physics_name_list.append(f'{value} - {description}')
 
         return physics_name_lists
+
+    @classmethod
+    def get_chapters(cls) -> list[str]:
+
+        with connect(DATA_BASE) as con:
+
+            cursor = con.cursor()
+            result = list(map(PhysicsFormul.remove_tuple, cursor.execute('''SELECT DISTINCT Chapter FROM physics_value''').fetchall()))
+
+        return sorted(result)
 
 
 class AppendPhysicsFormuls:

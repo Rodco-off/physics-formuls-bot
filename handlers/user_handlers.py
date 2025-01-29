@@ -37,11 +37,13 @@ async def process_start_command(message: Message) -> None:
 async def process_tutorial_names_command(message: Message) -> None:
 
     physics_name_list = PhysicsName.get_all_physics_name()
+    chapters = PhysicsName.get_chapters()
 
     await message.answer('Вот все обозначения, которые может считывать наш бот:')
 
-    for name_list in physics_name_list:
+    for index, name_list in enumerate(physics_name_list):
 
+        await message.answer(f'Формулы по теме <<{chapters[index]}>>: ')
         await message.answer(f'\n{'·' + ',\n· '.join(name_list)}')
 
 
