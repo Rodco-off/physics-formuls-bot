@@ -15,5 +15,8 @@ class StepAppendPhysicsFormuls(StatesGroup):
     VALUE = State()
     DESCRIPTION = State()
     FORMUL = State()
+    DESCRIPTION_FORMUL = State()
     UNIT = State()
+    CHAPTER = State()
+
     ACCEPT = State()

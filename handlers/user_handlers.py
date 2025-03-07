@@ -2,7 +2,7 @@ import logging
 
 from config import ID_ADMIN
 from physics_error import SearchError, ValueNotUniqueError, WriteNotStr
-from physics_scripts import PhysicsFormul, PhysicsName, AppendPhysicsFormuls
+from physics_scripts import FindPhysicsFormul, FindPhysicsName, AppendPhysicsFormuls
 from utils.state_physics_formuls import StepGetPhysicsFormul, StepAppendPhysicsFormuls
 
 from aiogram import Router
@@ -25,7 +25,7 @@ async def process_start_command(message: Message) -> None:
 /physics_formuls и ввести физическое обозначение, и бот тебе найдет все возможные формулы для нахождения этого обозначения, чтобы выйти из него напишите "cancel"
 \nВот команды которые тебе могут пригодиться:\n
 /tutorial_names - Все физические обозначения, которые я знаю🎓,
-/physics_formuls - ищу формулу для этого физического обозначения🔍, \n/help - список всех комманд📋
+/physics_formuls - ищу формулу для этого физического обозначения🔍, \n/help - список всех комманд📋,
 /support - Поможем разобраться. Контакты админов.🔥
 
 🔥(Для администрации)🔥
@@ -36,8 +36,8 @@ async def process_start_command(message: Message) -> None:
 @router.message(Command(commands=['tutorial_names']))
 async def process_tutorial_names_command(message: Message) -> None:
 
-    physics_name_list = PhysicsName.get_all_physics_name()
-    chapters = PhysicsName.get_chapters()
+    physics_name_list = FindPhysicsName.get_all_physics_name()
+    chapters = FindPhysicsName.get_chapters()
 
     await message.answer('Вот все обозначения, которые может считывать наш бот:')
 
@@ -53,7 +53,7 @@ async def process_help_command(message: Message) -> None:
     await message.answer('''Комманды которые я умею распозновать:
                          \n/tutorial_names - Все физические обозначения, которые я знаю🎓,
 /physics_formuls - Ищу формулы для указонного физического обозначения🔍,
-/help - команды которые знает📋
+/help - команды которые знает📋,
 /support - Данные админов, чтобы связаться и решить ваши проблемы.🔥
 
 🔥(Для администрации)🔥
@@ -85,7 +85,7 @@ async def get_physics_formuls(message: Message, state: FSMContext) -> None:
 
         try:
 
-            physicsFormul = PhysicsFormul(value)
+            physicsFormul = FindPhysicsFormul(value)
 
         except SearchError as error:
 
@@ -131,12 +131,12 @@ async def process_append_formul(message: Message, state: FSMContext) -> None:
 async def append_value_formul(message: Message, state: FSMContext) -> None:
 
     await state.update_data(value=message.text)
-    await message.answer('Отлично, теперь введите расшифровку физического обозначения (через ";")')
+    await message.answer('Отлично, теперь введите расшифровку, того что ищет формула')
     await state.set_state(StepAppendPhysicsFormuls.DESCRIPTION)
 
 
 @router.message(StepAppendPhysicsFormuls.DESCRIPTION)
-async def appned_description_formul(message: Message, state: FSMContext) -> None:
+async def appned_description(message: Message, state: FSMContext) -> None:
 
     await state.update_data(description=message.text)
     await message.answer('Хорошо, теперь введите ссылку на формулу')
@@ -147,21 +147,39 @@ async def appned_description_formul(message: Message, state: FSMContext) -> None
 async def appned_formul(message: Message, state: FSMContext) -> None:
 
     await state.update_data(formul=message.text)
-    await message.answer('Превосходно, осталось совсем немного, введите в чём измеряется')
+    await message.answer('Превосходно, введите расшифровку этой формулы, каждое физическое значение через ";" ')
+    await state.set_state(StepAppendPhysicsFormuls.DESCRIPTION_FORMUL)
+
+
+@router.message(StepAppendPhysicsFormuls.DESCRIPTION_FORMUL)
+async def append_description_formul(message: Message, state: FSMContext) -> None:
+
+    await state.update_data(description_formul=message.text)
+    await message.answer('Замечательно, осталось совсем немного, теперь введите расшифровку картинки, каждое физическое значение через ";"')
     await state.set_state(StepAppendPhysicsFormuls.UNIT)
 
 
 @router.message(StepAppendPhysicsFormuls.UNIT)
-async def appned_unit_formul(message: Message, state: FSMContext) -> None:
+async def append_unit(message: Message, state: FSMContext) -> None:
 
     await state.update_data(unit=message.text)
+    await message.answer('Супер, осталось всего одна делать, введите к какому разделу принадлежит формула')
+    await state.set_state(StepAppendPhysicsFormuls.CHAPTER)
+
+
+@router.message(StepAppendPhysicsFormuls.CHAPTER)
+async def appned_chapter(message: Message, state: FSMContext) -> None:
+
+    await state.update_data(chapter=message.text)
 
     data = await state.get_data()
     await message.answer(f'''Вы молодец. Вот что у нас с вами получилось:
-\n·физическое обозначение: {data['value']},
-·расшифровка: {data['description']}''')
+\n·Физическое обозначение: {data['value']},
+·Расшифровка: {data['description']},''')
     await message.bot.send_photo(message.chat.id, URLInputFile(data['formul']))
-    await message.answer(f'·в чём измеряется: {data['unit']}')
+    await message.answer(f'·Расшифровка картинки: {data['description_formul']},')
+    await message.answer(f'·В чём измеряется: {data['unit']},')
+    await message.answer(f'·К какому разделу принадлежит формула: {data['chapter']}')
     await message.answer('''Всё верно ? \n(Напишите yes, если верно.\nНапишите no, если хотите попробовать ещё раз написать.
 Напишите cancel, если хотите выйти из режима добавления формулы)''')
     await state.set_state(StepAppendPhysicsFormuls.ACCEPT)
@@ -187,7 +205,8 @@ async def accept_formul(message: Message, state: FSMContext) -> None:
 
         try:
 
-            append_physics_formul = AppendPhysicsFormuls(data['value'], data['description'], data['formul'], data['unit'])
+            append_physics_formul = AppendPhysicsFormuls(data['value'], data['description'], data['formul'],
+                                                         data['description_formul'], data['unit'], data['chapter'])
             append_physics_formul.append_formul()
 
         except ValueNotUniqueError as error:

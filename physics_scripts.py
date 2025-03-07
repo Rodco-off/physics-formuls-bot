@@ -2,10 +2,10 @@ from sqlite3 import connect
 from typing import Any
 
 from config import DATA_BASE
-from physics_error import SearchError, ValueNotUniqueError, WriteNotStr
+from physics_error import SearchError, WriteNotStr
 
 
-class PhysicsFormul:
+class FindPhysicsFormul:
 
     '''Класс для поиска формул по физике'''
 
@@ -32,8 +32,10 @@ class PhysicsFormul:
         with connect(DATA_BASE) as con:
 
             curcor = con.cursor()
+
             result = curcor.execute(f'''SELECT Value FROM physics_value
-                                        WHERE Value = '{self.name}' OR Description = '{self.name}' ''').fetchall()
+                                        WHERE Value LIKE '%{self.name.lower()}%' OR Description LIKE '%{self.name.lower()}%' ''').fetchall()
+            print(result)
 
             if not result:
 
@@ -79,7 +81,7 @@ class PhysicsFormul:
 
             cursor = con.cursor()
             result = cursor.execute(f'''SELECT Description_Formuls FROM physics_formuls
-                                       WHERE Value = '{self.physics_name}' ''').fetchall()
+                                        WHERE Value = '{self.physics_name}' ''').fetchall()
 
             all_description = []
 
@@ -112,7 +114,7 @@ class PhysicsFormul:
         return string
 
 
-class PhysicsName:
+class FindPhysicsName:
 
     '''Класс для нахождения физических обозначений'''
 
@@ -150,7 +152,7 @@ class PhysicsName:
         with connect(DATA_BASE) as con:
 
             cursor = con.cursor()
-            result = list(map(PhysicsFormul.remove_tuple, cursor.execute('''SELECT DISTINCT Chapter FROM physics_value''').fetchall()))
+            result = list(map(FindPhysicsFormul.remove_tuple, cursor.execute('''SELECT DISTINCT Chapter FROM physics_value''').fetchall()))
 
         return sorted(result)
 
@@ -159,62 +161,30 @@ class AppendPhysicsFormuls:
 
     '''Класс для добавление формулы в базу данных'''
 
-    def __init__(self, value: str, description: str, formul: str, unit: str) -> None:
+    def __init__(self, value: str, description: str, formul: str, description_formul: str, unit: str, chapter: str) -> None:
 
         self.value = value
         self.description = description
         self.formul = formul
         self.unit = unit
-
-        self.is_append_value = True
-        self.is_append_formul = True
+        self.description_formul = description_formul
+        self.chapter = chapter
 
     def __setattr__(self, name: str, value: Any) -> None:
 
-        if (name == 'value' or name == 'description') and not self.check_value_unique(value):
+        if name in ('value', 'description', 'formul', 'unit', 'description_formul', 'chapter') and type(value) is str:
 
-            self.is_append_value = False
-
-        elif name == 'formul' and not self.check_formul_unique(value):
-
-            self.is_append_formul = False
+            raise WriteNotStr('Неизвестеная ошибка. Извините, отправлены неизвестные объекты')
 
         super().__setattr__(name, value)
 
     def append_formul(self) -> None:
 
-        if not self.is_append_formul and not self.is_append_value:
-
-            raise ValueNotUniqueError('Такая формула уже есть для этого обозначения')
-
         with connect(DATA_BASE) as con:
 
             cursor = con.cursor()
 
-            if self.is_append_formul:
-
-                cursor.execute(f'''INSERT INTO physics_formuls(Value, Formuls) VALUES('{self.value}', '{self.formul}')''')
-
-            if self.is_append_value:
-
-                cursor.execute(f'''INSERT INTO physics_value(Value, Description, Unit) VALUES('{self.value}', '{self.description}', '{self.unit}')''')
-
-    def check_value_unique(self, value: str) -> None:
-
-        with connect(DATA_BASE) as con:
-
-            cursor = con.cursor()
-            result = cursor.execute(f'''SELECT COUNT(ID) FROM physics_value
-                                        WHERE Value = '{value}' AND Description = '{value}' ''').fetchall()
-
-        return True if result[0][0] else False
-
-    def check_formul_unique(self, formul: str) -> None:
-
-        with connect(DATA_BASE) as con:
-
-            cursor = con.cursor()
-            result = cursor.execute(f'''SELECT COUNT(ID) FROM physics_formuls
-                                        WHERE Formuls = '{formul}' ''').fetchall()
-
-        return True if result[0][0] else False
+            cursor.execute(f'''INSERT INTO physics_formuls (Value, Formuls, Description_Formuls)
+                               VALUES ({self.value}, {self.formul}, {self.description_formul})''')
+            cursor.execute(f'''INSERT INTO physics_value (Descriptions, Value, Unit, Chapter)
+                               VALUES ({self.description}, {self.value}, {self.unit}, {self.chapter})''')
